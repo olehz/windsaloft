@@ -1,1 +1,1 @@
-from .jetstream import jetstreams
+from .jetstream import jet_streams
