@@ -28,7 +28,7 @@ Convert GRIBs data to "standard" -180 to 180 extent global grids
 
 Calculate streams
 
-	feature_collection = windsaloft.jetstreams(u, v, pixel_dist=5, min_value=10, smooth=2, zigzag_degrees=45)
+	feature_collection = windsaloft.jet_streams(u, v, pixel_dist=5, min_value=10, smooth=2, zigzag_degrees=45)
 
 Write output to a file
 

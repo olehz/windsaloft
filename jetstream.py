@@ -1,16 +1,16 @@
-import math
+from math import atan2, degrees, floor
 from collections import deque, defaultdict
 from random import shuffle
-from geojson import dump, FeatureCollection, Feature, LineString, MultiLineString
+from geojson import FeatureCollection, Feature, MultiLineString
 
 
-class jetstream:
+class JetStream:
     def __init__(self, u_data, v_data, **kwargs) -> None:
         if (
-            len(u_data) <= 1
-            or len(v_data) <= 1
-            or len(u_data[0]) <= 1
-            or len(v_data[0]) <= 1
+                len(u_data) <= 1
+                or len(v_data) <= 1
+                or len(u_data[0]) <= 1
+                or len(v_data[0]) <= 1
         ):
             raise TypeError("Raster is too small")
 
@@ -53,11 +53,11 @@ class jetstream:
     def _get_line(self, x0: int, y0: int):
         # Verify that seed point is available
         if (
-            x0 < 0
-            or x0 >= self.x_size
-            or y0 < 0
-            or y0 >= self.y_size
-            or self.used_pixels[y0][x0]
+                x0 < 0
+                or x0 >= self.x_size
+                or y0 < 0
+                or y0 >= self.y_size
+                or self.used_pixels[y0][x0]
         ):
             return []
 
@@ -84,7 +84,7 @@ class jetstream:
                     break
 
                 # Skip ZigZag
-                curr_dir = round(math.degrees(math.atan2(val["u"], val["v"])))
+                curr_dir = round(degrees(atan2(val["u"], val["v"])))
                 if prev_dir > float("-inf"):
                     diff_dir = abs(prev_dir - curr_dir)
                     diff_dir = min(diff_dir, abs(360 - diff_dir))
@@ -109,9 +109,9 @@ class jetstream:
         # x/y indices below and above the cell to interpolate in .
         # If minmax affects an index then we're on or outside the border
         # and we will do implicit linear extrapolation out to any distance.
-        x0 = min(max(math.floor(x), 0), self.x_size - 2)
+        x0 = min(max(floor(x), 0), self.x_size - 2)
         x1 = x0 + 1
-        y0 = min(max(math.floor(y), 0), self.y_size - 2)
+        y0 = min(max(floor(y), 0), self.y_size - 2)
         y1 = y0 + 1
 
         # Linear weights along x/y axes
@@ -128,17 +128,17 @@ class jetstream:
 
         # Interpolate the U, V vector components
         u = (
-            self.u_data[y0][x0] * pw00
-            + self.u_data[y0][x1] * pw01
-            + self.u_data[y1][x0] * pw10
-            + self.u_data[y1][x1] * pw11
+                self.u_data[y0][x0] * pw00
+                + self.u_data[y0][x1] * pw01
+                + self.u_data[y1][x0] * pw10
+                + self.u_data[y1][x1] * pw11
         )
 
         v = (
-            self.v_data[y0][x0] * pw00
-            + self.v_data[y0][x1] * pw01
-            + self.v_data[y1][x0] * pw10
-            + self.v_data[y1][x1] * pw11
+                self.v_data[y0][x0] * pw00
+                + self.v_data[y0][x1] * pw01
+                + self.v_data[y1][x0] * pw10
+                + self.v_data[y1][x1] * pw11
         )
 
         # Scale u, v vector to make one of the components at least one so the trace steps into a new cell.
@@ -146,8 +146,9 @@ class jetstream:
         mdl = max(abs(u), abs(v)) or 1
         return {"u": u / mdl, "v": v / mdl}
 
-    # Chaikin Smooth
-    def _smooth(self, line: list[list[float]], n: int = 2) -> list[list[float]]:
+    @staticmethod
+    def _smooth(line, n: int = 2):
+        # Smoothing lines using Chaikins algorithm
         first = line[0]
         last = line[-1]
         for _ in range(n):
@@ -164,36 +165,36 @@ class jetstream:
             line = new_pts
         return line
 
-    def _xy2lonlat(self, x: float, y: float) -> list[float]:
-        return [x * self.pixel_size - 180, y * -self.pixel_size + 90.125]
+    def _xy2lonlat(self, x: float, y: float):
+        return x * self.pixel_size - 180, y * -self.pixel_size + 90.125
 
-    def _split_by_antimeridian(self, line: list[list[float]]):
+    def _split_by_date_line(self, line):
         # Split an input linestring in EPSG:4326 against the -180/180 date line
         px, py = line[0]
         shift = self._get_shift(px)
         prev = shift
-        geolines = [[self._xy2lonlat(px + shift, py)]]
+        geo_lines = [[self._xy2lonlat(px + shift, py)]]
         group = 0
         for i in range(1, len(line)):
             x, y = line[i]
             shift = self._get_shift(x)
             if shift != prev:
                 group += 1
-                geolines.append([])
+                geo_lines.append([])
 
                 ny = py + (y - py) * (-px if min(px, x) < 0 else self.x_size - px) / (
-                    x - px
+                        x - px
                 )
                 if shift < prev:
-                    geolines[group - 1].append(self._xy2lonlat(self.x_size, ny))
-                    geolines[group].append(self._xy2lonlat(0, ny))
+                    geo_lines[group - 1].append(self._xy2lonlat(self.x_size, ny))
+                    geo_lines[group].append(self._xy2lonlat(0, ny))
                 else:
-                    geolines[group - 1].append(self._xy2lonlat(0, ny))
-                    geolines[group].append(self._xy2lonlat(self.x_size, ny))
+                    geo_lines[group - 1].append(self._xy2lonlat(0, ny))
+                    geo_lines[group].append(self._xy2lonlat(self.x_size, ny))
                 prev = shift
             px, py = x, y
-            geolines[group].append(self._xy2lonlat(x + shift, y))
-        return geolines
+            geo_lines[group].append(self._xy2lonlat(x + shift, y))
+        return MultiLineString(geo_lines)
 
     def _gen_starting_points(self):
         speed_groups = defaultdict(list)
@@ -223,13 +224,13 @@ class jetstream:
                 if line:
                     properties = {"id": idx}
                     line = self._smooth(line, self.smooth)
-                    line = self._split_by_antimeridian(line)
-                    f = Feature(geometry=MultiLineString(line), properties=properties)
+                    f = Feature(geometry=self._split_by_date_line(line), properties=properties)
                     features.append(f)
                     idx += 1
 
         return FeatureCollection(features)
 
-def jetstreams(u, v, **kwargs):
-    s = jetstream(u, v, **kwargs)
+
+def jet_streams(u, v, **kwargs):
+    s = JetStream(u, v, **kwargs)
     return s.to_geojson()
