@@ -5,7 +5,7 @@ Convert a vectorial raster field into streamlines. The output is in a convenient
 Installation
 -----
 
-Install the latest version of Elevation from the Python Package Index:
+Install the latest version from the Python Package Index:
 
 	$ pip install windsaloft
 
