@@ -2,6 +2,7 @@ from math import atan2, degrees, floor
 from collections import deque, defaultdict
 from random import shuffle
 from geojson import FeatureCollection, Feature, MultiLineString
+from .utils import smooth_line
 
 
 class JetStream:
@@ -31,8 +32,11 @@ class JetStream:
 
         self.used_pixels = [[False] * self.x_size for _ in range(self.y_size)]
 
+    def _is_outside(self, x, y) -> bool:
+        return x < 0 or x >= self.x_size or y < 0 or y >= self.y_size
+
     def _is_pixel_free(self, x0, y0) -> bool:
-        if x0 < 0 or x0 >= self.x_size or y0 < 0 or y0 >= self.y_size:
+        if self._is_outside(x0, y0):
             return False
 
         x_lo = max(x0 - self.pixel_dist, 0)
@@ -52,13 +56,7 @@ class JetStream:
 
     def _get_line(self, x0: int, y0: int):
         # Verify that seed point is available
-        if (
-                x0 < 0
-                or x0 >= self.x_size
-                or y0 < 0
-                or y0 >= self.y_size
-                or self.used_pixels[y0][x0]
-        ):
+        if self._is_outside(x0, y0) or self.used_pixels[y0][x0]:
             return []
 
         line_found = False
@@ -102,8 +100,7 @@ class JetStream:
         if line_found and len(line) > self.min_length:
             self.used_pixels[y0][x0] = True
             return list(line)
-        else:
-            return []
+        return []
 
     def _get_value_at_point(self, x: float, y: float) -> dict:
         # x/y indices below and above the cell to interpolate in .
@@ -145,25 +142,6 @@ class JetStream:
         # Don't divide by 0 but instead pass 0-vectors through unchanged to be handled by the caller
         mdl = max(abs(u), abs(v)) or 1
         return {"u": u / mdl, "v": v / mdl}
-
-    @staticmethod
-    def _smooth(line, n: int = 2):
-        # Smoothing lines using Chaikins algorithm
-        first = line[0]
-        last = line[-1]
-        for _ in range(n):
-            new_pts = [first]
-            for i in range(1, len(line)):
-                p0, p1 = line[i - 1], line[i]
-                p0x, p0y = p0
-                p1x, p1y = p1
-
-                q = [0.75 * p0x + 0.25 * p1x, 0.75 * p0y + 0.25 * p1y]
-                r = [0.25 * p0x + 0.75 * p1x, 0.25 * p0y + 0.75 * p1y]
-                new_pts.extend([q, r])
-            new_pts.append(last)
-            line = new_pts
-        return line
 
     def _xy2lonlat(self, x: float, y: float):
         return x * self.pixel_size - 180, y * -self.pixel_size + 90.125
@@ -207,12 +185,10 @@ class JetStream:
                     continue
 
                 speed_groups[round(v)].append([x, y])
-
-        for k, coords in sorted(speed_groups.items(), reverse=True):
+        for _, coords in sorted(speed_groups.items(), reverse=True):
             if len(coords) > 1:
                 shuffle(coords)
-            for x, y in coords:
-                yield x, y
+            yield from coords
 
     def to_geojson(self):
         # Iterate over all grid points in pseudo-random order and try to start a line there
@@ -223,7 +199,7 @@ class JetStream:
                 line = self._get_line(x, y)
                 if line:
                     properties = {"id": idx}
-                    line = self._smooth(line, self.smooth)
+                    line = smooth_line(line, self.smooth)
                     f = Feature(geometry=self._split_by_date_line(line), properties=properties)
                     features.append(f)
                     idx += 1

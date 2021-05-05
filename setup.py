@@ -16,14 +16,18 @@ setup(
     author='Oleh Zamkovyi',
     author_email='oleh.zam@gmail.com',
     license='MIT',
-    packages=['windsaloft'],
-    install_requires=[
-        'geojson'
-    ],
-    zip_safe=False,
-    test_suite='tests',
     classifiers=[
         'License :: OSI Approved :: MIT License',
         'Programming Language :: Python :: 3'
     ],
+    packages=['windsaloft'],
+    test_suite='tests',
+    include_package_data=False,
+    zip_safe=False,
+    install_requires=[
+        'geojson'
+    ],
+    extras_require={
+        'test': ['numpy', 'pytest'],
+    },
 )

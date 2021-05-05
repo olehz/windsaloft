@@ -2,9 +2,16 @@
 
 Convert a vectorial raster field into streamlines. The output is in a convenient GeoJSON format.
 
+Installation
+-----
 
-USAGE
-=====
+Install the latest version of Elevation from the Python Package Index:
+
+	$ pip install windsaloft
+
+
+Usage
+-----
 
 To create the streamlines, a vectorial field is needed:
 
