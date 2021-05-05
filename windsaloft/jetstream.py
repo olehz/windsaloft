@@ -189,8 +189,6 @@ class JetStream:
 
                 speed_groups[round(v)].append([x, y])
         for _, coords in sorted(speed_groups.items(), reverse=True):
-            if len(coords) > 1:
-                shuffle(coords)
             yield from coords
 
     def to_geojson(self):
