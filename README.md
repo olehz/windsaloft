@@ -1,3 +1,4 @@
+![streamlines_filtered](https://user-images.githubusercontent.com/157599/117190312-eff82600-ade7-11eb-83fc-6b781c16d526.png)
 # windsaloft
 
 Convert a vectorial raster field into streamlines. The output is in a convenient GeoJSON format.
