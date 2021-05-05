@@ -22,7 +22,7 @@ class JetStream:
         self.v_data = v_data
         self.x_size = len(self.u_data[0])
         self.y_size = len(self.u_data)
-        self.pixel_size = 360 / self.x_size
+        self.pixel_size = 180 / (self.y_size - 1)
 
         self.pixel_dist = kwargs.get("pixel_dist", 5)
         self.smooth = kwargs.get("smooth", 0)
@@ -106,8 +106,9 @@ class JetStream:
         # x/y indices below and above the cell to interpolate in .
         # If minmax affects an index then we're on or outside the border
         # and we will do implicit linear extrapolation out to any distance.
-        x0 = min(max(floor(x), 0), self.x_size - 2)
-        x1 = x0 + 1
+        x0 = floor(x)
+        x1 = (x0 + 1) % self.x_size
+
         y0 = min(max(floor(y), 0), self.y_size - 2)
         y1 = y0 + 1
 
@@ -144,7 +145,10 @@ class JetStream:
         return {"u": u / mdl, "v": v / mdl}
 
     def _xy2lonlat(self, x: float, y: float):
-        return x * self.pixel_size - 180, y * -self.pixel_size + 90.125
+        return (
+            x * self.pixel_size - 180,
+            y * -self.pixel_size + 90
+        )
 
     def _split_by_date_line(self, line):
         # Split an input linestring in EPSG:4326 against the -180/180 date line
@@ -160,14 +164,13 @@ class JetStream:
                 group += 1
                 geo_lines.append([])
 
-                ny = py + (y - py) * (-px if min(px, x) < 0 else self.x_size - px) / (
-                        x - px
-                )
-                if shift < prev:
-                    geo_lines[group - 1].append(self._xy2lonlat(self.x_size, ny))
+                if x > px:
+                    ny = py + (y - py) * (self.x_size - px % self.x_size) / (x - px)
+                    geo_lines[group-1].append(self._xy2lonlat(self.x_size, ny))
                     geo_lines[group].append(self._xy2lonlat(0, ny))
                 else:
-                    geo_lines[group - 1].append(self._xy2lonlat(0, ny))
+                    ny = py + (y - py) * (px % self.x_size) / (px - x)
+                    geo_lines[group-1].append(self._xy2lonlat(0, ny))
                     geo_lines[group].append(self._xy2lonlat(self.x_size, ny))
                 prev = shift
             px, py = x, y

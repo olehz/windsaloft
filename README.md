@@ -30,8 +30,8 @@ U/V Components
 
 Convert GRIBs data to "standard" -180 to 180 extent global grids
 
-	u = np.concatenate((u, u[:, :1]), axis=1)
-	v = np.concatenate((v, v[:, :1]), axis=1)
+	u = np.roll(u, u.shape[1] // 2, axis=1)
+	v = np.roll(v, v.shape[1] // 2, axis=1)
 
 Calculate streams
 
