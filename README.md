@@ -2,7 +2,7 @@
 
 Convert a vectorial raster field into streamlines. The output is in a convenient GeoJSON format.
 
-![streamlines](https://user-images.githubusercontent.com/157599/117187271-6e52c900-ade4-11eb-8f1c-aae793afae5d.png)
+![streamlines_filtered](https://user-images.githubusercontent.com/157599/117190312-eff82600-ade7-11eb-83fc-6b781c16d526.png)
 
 Installation
 -----
