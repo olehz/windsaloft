@@ -192,5 +192,4 @@ class JetStream:
 
 
 def jet_streams(u, v, **kwargs):
-    s = JetStream(u, v, **kwargs)
-    return s.to_geojson()
+    return JetStream(u, v, **kwargs).to_geojson()
