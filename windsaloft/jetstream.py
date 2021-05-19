@@ -32,10 +32,10 @@ class JetStream:
         self.used_pixels = [[False] * self.W for _ in range(self.H)]
 
     def _is_pixel_free(self, x0, y0) -> bool:
-        for i in range(-self.pixel_dist, self.pixel_dist + 1):
-            for j in range(-self.pixel_dist, self.pixel_dist + 1):
-                if i**2 + i**2 <= self.pixel_dist**2:
-                    x, y = self._get_xy(x0 + i, y0 + j)
+        for _x in range(-self.pixel_dist, self.pixel_dist + 1):
+            for _y in range(-self.pixel_dist, self.pixel_dist + 1):
+                if 0 < y0 + _y < self.H - 1 and _x ** 2 + _y ** 2 <= self.pixel_dist**2:
+                    x, y = self._get_xy(x0 + _x, y0 + _y)
                     if self.used_pixels[y][x]:
                         return False
         return True
@@ -46,13 +46,6 @@ class JetStream:
         return 0
 
     def _get_xy(self, x, y):
-        if y < 0:
-            y = -y
-            x += self.W // 2
-        elif y > self.H - 1:
-            y = 2 * (self.H - 1) - y
-            x += self.W // 2
-
         x += self._get_shift(x)
         return x, y
 
@@ -76,8 +69,8 @@ class JetStream:
 
                 x += val["u"] * trajectory
                 y += -val["v"] * trajectory
-                xr, yr = self._get_xy(round(x), round(y))
-                if y < 0 or y > self.H - 1 or self.used_pixels[yr][xr]:
+                x_rounded, y_rounded = self._get_xy(round(x), round(y))
+                if y < 1 or y > self.H - 2 or self.used_pixels[y_rounded][x_rounded]:
                     break
 
                 # Skip sharp angles
@@ -95,7 +88,7 @@ class JetStream:
                     line.appendleft([x, y])
 
                 line_found = True
-                self.used_pixels[yr][xr] = True
+                self.used_pixels[y_rounded][x_rounded] = True
         if line_found and len(line) > self.min_length:
             self.used_pixels[y0][x0] = True
             return list(line)
@@ -165,7 +158,7 @@ class JetStream:
 
     def _gen_starting_points(self):
         speed_groups = defaultdict(list)
-        for y in range(self.H):
+        for y in range(2, self.H - 2):
             for x in range(self.W):
                 v = self.U[y][x] ** 2 + self.V[y][x] ** 2
                 if v < self.min_value:

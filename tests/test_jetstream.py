@@ -9,6 +9,6 @@ def test_raster_base_coordinates_ne():
 
     feature_collection = jet_streams(
         u, v, pixel_dist=30, min_value=10, smooth=0, zigzag_degrees=45)
-    x, y = feature_collection.features[1].geometry.coordinates[0][0]
-    assert x == -16.309874
-    assert y == -0.768306
+    x, y = feature_collection.features[0].geometry.coordinates[0][0]
+    assert x == -178.0
+    assert y == 87.830286
