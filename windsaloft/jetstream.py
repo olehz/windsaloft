@@ -31,31 +31,34 @@ class JetStream:
 
         self.used_pixels = [[False] * self.W for _ in range(self.H)]
 
-    def _is_outside(self, x, y) -> bool:
-        return x < 0 or x >= self.W or y < 0 or y >= self.H
-
     def _is_pixel_free(self, x0, y0) -> bool:
-        if self._is_outside(x0, y0):
-            return False
-
-        x_lo = max(x0 - self.pixel_dist, 0)
-        x_hi = min(x0 + self.pixel_dist, self.W - 1)
-        y_lo = max(y0 - self.pixel_dist, 0)
-        y_hi = min(y0 + self.pixel_dist, self.H - 1)
-        for x in range(x_lo, x_hi + 1):
-            for y in range(y_lo, y_hi + 1):
-                if self.used_pixels[y][x]:
-                    return False
+        for i in range(-self.pixel_dist, self.pixel_dist + 1):
+            for j in range(-self.pixel_dist, self.pixel_dist + 1):
+                if i**2 + i**2 <= self.pixel_dist**2:
+                    x, y = self._get_xy(x0 + i, y0 + j)
+                    if self.used_pixels[y][x]:
+                        return False
         return True
 
     def _get_shift(self, x: float) -> int:
-        if x < 0 or x >= self.W:
+        if x < 0 or x > self.W - 1:
             return int(x // self.W) * -self.W
         return 0
 
+    def _get_xy(self, x, y):
+        if y < 0:
+            y = -y
+            x += self.W // 2
+        elif y > self.H - 1:
+            y = 2 * (self.H - 1) - y
+            x += self.W // 2
+
+        x += self._get_shift(x)
+        return x, y
+
     def _get_line(self, x0: int, y0: int):
         # Verify that seed point is available
-        if self._is_outside(x0, y0) or self.used_pixels[y0][x0]:
+        if self.used_pixels[y0][x0]:
             return []
 
         line_found = False
@@ -65,7 +68,7 @@ class JetStream:
             x, y = x0, y0
             prev_dir = float("-inf")
             while True:
-                val = self._get_value_at_point(x + self._get_shift(x), y)
+                val = self._get_value_at_point(self._get_xy(x, y))
                 # Zero speed points are problematic
                 if val["u"] + val["v"] == 0:
                     self.used_pixels[y0][x0] = True
@@ -73,10 +76,8 @@ class JetStream:
 
                 x += val["u"] * trajectory
                 y += -val["v"] * trajectory
-
-                xr, yr = round(x), round(y)
-                xr += self._get_shift(xr)
-                if yr < 0 or yr >= self.H or self.used_pixels[yr][xr]:
+                xr, yr = self._get_xy(round(x), round(y))
+                if y < 0 or y > self.H - 1 or self.used_pixels[yr][xr]:
                     break
 
                 # Skip sharp angles
@@ -100,12 +101,13 @@ class JetStream:
             return list(line)
         return []
 
-    def _get_value_at_point(self, x: float, y: float) -> dict:
+    def _get_value_at_point(self, xy) -> dict:
+        x, y = xy
         # x/y indices below and above the cell to interpolate in .
         # If minmax affects an index then we're on or outside the border
         # and we will do implicit linear extrapolation out to any distance.
-        x0, y0 = floor(x), min(max(floor(y), 0), self.H - 2)
-        x1, y1 = (x0 + 1) % self.W, y0 + 1
+        x0, y0 = floor(x), floor(y)
+        x1, y1 = (x0 + 1) % self.W, (y0 + 1) % self.H
 
         # Linear weights along x/y axes
         xw1, yw1 = x - x0, y - y0
